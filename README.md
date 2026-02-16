@@ -35,11 +35,9 @@ To use the plugin in your permanent setup, add it to your `layout.kdl`:
 
 ```kdl
 layout {
-    default_tab_template {
-        children
-        pane size=1 borderless=true {
-            plugin location="file:~/.config/zellij/plugins/layoutswitch.wasm"
-        }
+    children
+    pane size=1 borderless=true {
+        plugin location="file:~/.config/zellij/plugins/layoutswitch.wasm"
     }
 }
 
@@ -75,8 +73,6 @@ The plugin listens for two primary commands via Zellij's messaging system:
 Cycles through swap layouts until the active one matches your target.
 
 ```bash
-zellij command post-message "focus-layout" "standard"
-# OR via pipe
 zellij pipe -n focus-layout -- "nav_expanded"
 
 ```
@@ -86,8 +82,6 @@ zellij pipe -n focus-layout -- "nav_expanded"
 Finds a terminal pane with a specific name and gives it focus.
 
 ```bash
-zellij command post-message "focus-pane" "Module Editor"
-# OR via pipe
 zellij pipe -n focus-pane -- "Terminal 1"
 
 ```
@@ -101,4 +95,3 @@ make clean    # Remove build artifacts
 
 ```
 
-Would you like me to add a **watchexec** configuration to your `dev.kdl` section so the plugin reloads automatically every time you save a `.rs` file?

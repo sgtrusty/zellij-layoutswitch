@@ -7,7 +7,7 @@ struct State {
     target_pane_title: Option<String>,
     visited_layouts: Vec<String>,
     dump_requested: bool,
-    processing_action: bool, // Prevent infinite event loops
+    processing_action: bool,
 }
 
 register_plugin!(State);
