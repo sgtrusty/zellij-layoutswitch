@@ -1,0 +1,19 @@
+# Added by Rust
+/target/
+
+# Local configuration/environment
+.env
+.env.local
+
+# IDE-specific
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Dependency locks (Optional)
+# Remove Cargo.lock from gitignore for executable projects
+# Keep Cargo.lock in gitignore for library projects
+# Cargo.lock
+
+/target
