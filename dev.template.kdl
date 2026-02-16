@@ -1,0 +1,23 @@
+layout {
+    pane size=1 borderless=true { plugin location="zellij:tab-bar"; }
+    
+    pane split_direction="vertical" {
+        pane edit="src/main.rs" // Your code
+        
+        pane {
+            // Logs pane: Tails the Zellij log for debug info
+            pane name="LOGS" {
+                command "bash"
+                args "-c" "tail -f /tmp/zellij-1000/zellij-log/zellij.log"
+            }
+            
+            pane stacked=true {
+                // Re-compile and re-inject the plugin with one click/enter
+                pane size="10%" name="RELOAD PLUGIN" {
+                    command "bash"
+                    args "-c" "cargo build --target wasm32-wasip1 && zellij action start-or-reload-plugin file:target/wasm32-wasip1/debug/layoutswitch.wasm"
+                }
+            }
+        }
+    }
+}

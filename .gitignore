@@ -11,6 +11,10 @@
 *.swp
 *.swo
 
+# Custom workflow ops
+dev.kdl
+
+
 # Dependency locks (Optional)
 # Remove Cargo.lock from gitignore for executable projects
 # Keep Cargo.lock in gitignore for library projects

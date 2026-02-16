@@ -1,4 +1,3 @@
-# Inside your plugin.yaml / layout file
 - direction: Vertical
   run:
     plugin:

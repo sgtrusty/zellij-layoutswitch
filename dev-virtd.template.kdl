@@ -1,0 +1,32 @@
+layout {
+    // 1. Tab Bar
+    pane size=1 borderless=true { plugin location="zellij:tab-bar"; }
+    
+    // 2. Main Workspace (Wrapped in a block to keep it above the plugin)
+    pane {
+        split_direction "vertical"
+        pane edit="src/main.rs"
+        
+        pane {
+            pane name="LOGS" {
+                command "bash"
+                args "-c" "tail -f /tmp/zellij-1000/zellij-log/zellij.log"
+            }
+            
+            pane stacked=true {
+                pane size="10%" name="RELOAD PLUGIN (DOCKER)" {
+                    command "bash"
+                    args "-c" "$doomstore/projs/virtualized/arch-safecode/bin/dvirtd.sh rust usedir,usemake,useforce && make debug"
+                }
+            }
+        }
+    }
+
+    // 3. The Dedicated Plugin Slot (10% Height at the bottom)
+    pane size="10%" name="LAYOUT SWITCHER" {
+        pane name="CMD" focus=true {
+            command "bash"
+            args "-c" "bash && zellij action close-tab"
+        }
+    }
+}

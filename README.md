@@ -1,91 +1,104 @@
-### Zellij Layout Switcher (Rust WASM Plugin)
+# Zellij Layout Switcher
 
-This plugin provides a high-performance, flicker-free way to switch between **Zellij Swap Layouts** and focus specific panes. Unlike Bash scripts that parse text dumps, this plugin communicates directly with the Zellij engine via the WASM ABI, making transitions nearly instantaneous.
-
----
-
-## 🛠 What it does
-
-1. **State-Aware Cycling**: When triggered, it cycles through your `swap_tiled_layouts` until it finds the one you requested (e.g., "standard" or "nav_expanded").
-2. **Smart Pane Focusing**: Once the correct layout is active, it automatically finds the pane named **"Module Editor"** (regardless of its internal ID) and gives it focus.
-3. **Command-Line Trigger**: It listens for `CustomMessage` events, allowing you to trigger complex UI changes from simple shell commands or Yazi/Vim integrations.
+A high-performance Rust WASM plugin for Zellij that enables instant, state-aware swapping of **Swap Layouts** and precise **Pane Focusing**. By bypassing shell-scripted text parsing and communicating directly with the Zellij engine, it provides a flicker-free UI experience.
 
 ---
 
-## 🚀 Installation & Setup
+## 🛠 Features
 
-### 1. Build the Plugin
+* **Layout Cycling**: Transitions between `swap_tiled_layouts` (e.g., from "compact" to "expanded") by name.
+* **Targeted Focusing**: Jumps to specific panes by their title (e.g., your "Module Editor") across any layout.
+* **ABI-Native**: Uses the Zellij WASM ABI for near-zero latency.
+* **Automation-Ready**: Listen for `CustomMessage` or `Pipe` triggers from external scripts, Neovim, or Yazi.
+
+---
+
+## 🚀 Getting Started
+
+### 1. Build & Install
 
 Ensure you have the Rust WASI target installed:
+`rustup target add wasm32-wasip1`
+
+Using the provided **Makefile**, you can compile and move the plugin to your local config in one go:
 
 ```bash
-rustup target add wasm32-wasip1
-cargo build --release --target wasm32-wasip1
-mkdir -p ~/.config/zellij/plugins
-cp target/wasm32-wasip1/release/zj-layout-switcher.wasm ~/.config/zellij/plugins/
-zellij action reload-plugins 2>/dev/null
+make          # Builds release WASM and installs to ~/.config/zellij/plugins/
+# OR
+make build    # Just compile
 
 ```
 
-The compiled file will be at:
-`target/wasm32-wasip1/release/zj-layout-switcher.wasm`
+### 2. Deployment
 
-### 2. Configure your Zellij Layout
-
-Add the plugin to your `layout.kdl`. It is recommended to load it in a 1-row pane or a hidden pane.
+To use the plugin in your permanent setup, add it to your `layout.kdl`:
 
 ```kdl
 layout {
     default_tab_template {
         children
         pane size=1 borderless=true {
-            plugin location="file:/path/to/zj-layout-switcher.wasm"
+            plugin location="file:~/.config/zellij/plugins/layoutswitch.wasm"
         }
     }
-    // ... your tab and swap_tiled_layout definitions
 }
 
 ```
 
-### 3. Usage in Scripts
+---
 
-To switch to a specific layout and focus your editor, send a message to the plugin from any terminal inside Zellij:
+## 🧪 Development & Testing
+
+For active development, you can use a dedicated KDL layout to automate the **Build → Reload → Debug** cycle.
+
+### Manual Test Run
+
+If you want to run the plugin instantly without a layout file:
 
 ```bash
-# Switch to the 'standard' swap layout
-zellij command post-message "focus-layout" "standard"
+zellij action start-or-reload-plugin file:target/wasm32-wasip1/release/layoutswitch.wasm
 
-# Switch to the 'nav_expanded' swap layout
-zellij command post-message "focus-layout" "nav_expanded"
+```
+
+### Integrated Dev Environment (`dev.kdl`)
+
+Run this via: `zellij --layout dev.kdl`
+
+---
+
+## ⌨️ Usage (The API)
+
+The plugin listens for two primary commands via Zellij's messaging system:
+
+### 1. `focus-layout`
+
+Cycles through swap layouts until the active one matches your target.
+
+```bash
+zellij command post-message "focus-layout" "standard"
+# OR via pipe
+zellij pipe -n focus-layout -- "nav_expanded"
+
+```
+
+### 2. `focus-pane`
+
+Finds a terminal pane with a specific name and gives it focus.
+
+```bash
+zellij command post-message "focus-pane" "Module Editor"
+# OR via pipe
+zellij pipe -n focus-pane -- "Terminal 1"
 
 ```
 
 ---
 
-## 🔧 Integration Example: `vim-open.sh`
-
-Use this script to instantly jump to your "Standard" layout and open a file in Neovim:
+## 🧹 Maintenance
 
 ```bash
-#!/bin/bash
-# Tell the plugin to switch layouts and focus the editor
-zellij command post-message "focus-layout" "standard"
-
-# Short delay to allow the layout to settle
-sleep 0.05
-
-# Open the file
-zellij action write 27 # ESC
-zellij action write-chars ":e $1"
-zellij action write 13 # Enter
+make clean    # Remove build artifacts
 
 ```
 
----
-
-## 📝 Requirements
-
-* **Zellij**: 0.40.0 or higher.
-* **KDL Names**: Your panes must have `name="Module Editor"` defined in your KDL for the focus logic to find them.
-* **Rust**: `wasm32-wasip1` target.
-
+Would you like me to add a **watchexec** configuration to your `dev.kdl` section so the plugin reloads automatically every time you save a `.rs` file?
