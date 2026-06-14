@@ -10,7 +10,7 @@ env:
 
 jobs:
   release:
-    if: startsWith(github.event.head_commit.message, 'v')
+    if: startsWith(github.event.head_commit.message, 'build')
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -28,7 +28,7 @@ jobs:
         id: version
         run: |
           msg="${{ github.event.head_commit.message }}"
-          ver=$(echo "$msg" | sed -n 's/^v\([0-9]*\.[0-9]*\.[0-9]*\) release.*/\1/p')
+          ver=$(echo "$msg" | sed -n 's/^build(v\([0-9]*\.[0-9]*\.[0-9]*\)):.*/\1/p')
           echo "version=$ver" >> "$GITHUB_OUTPUT"
 
       - name: Create GitHub Release
