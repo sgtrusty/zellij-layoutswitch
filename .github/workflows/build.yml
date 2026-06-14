@@ -2,27 +2,30 @@ name: Release
 
 on:
   push:
-    branches: [v0.2.1]
+    branches: [main]
 
 env:
   PLUGIN_NAME: zellij-layoutswitch
-  DOCKER_EXPORT_DIR: target/wasm32-wasip1/release
 
 jobs:
   release:
-    if: startsWith(github.event.head_commit.message, 'build')
+    if: startsWith(github.event.head_commit.message, 'build(v')
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build via Docker
-        run: |
-          DOCKER_BUILDKIT=1 docker build \
-            --target export \
-            --output type=local,dest=${{ env.DOCKER_EXPORT_DIR }} \
-            -t ${{ env.PLUGIN_NAME }}-builder .
+      - name: Install Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          target: wasm32-wasip1
+
+      - name: Cache Cargo dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build
+        run: cargo build --release --target wasm32-wasip1
 
       - name: Extract version from commit message
         id: version
@@ -36,5 +39,5 @@ jobs:
         with:
           tag_name: v${{ steps.version.outputs.version }}
           name: v${{ steps.version.outputs.version }}
-          files: ${{ env.DOCKER_EXPORT_DIR }}/${{ env.PLUGIN_NAME }}.wasm
+          files: target/wasm32-wasip1/release/${{ env.PLUGIN_NAME }}.wasm
           generate_release_notes: true
