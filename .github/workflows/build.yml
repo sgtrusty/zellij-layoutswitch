@@ -2,7 +2,7 @@ name: Release
 
 on:
   push:
-    branches: [main, v0.2.1]
+    branches: [main]
 
 env:
   PLUGIN_NAME: zellij-layoutswitch
