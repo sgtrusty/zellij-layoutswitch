@@ -1,14 +1,16 @@
 # Variables
-PLUGIN_NAME=layoutswitch
+PLUGIN_NAME=zellij-layoutswitch
 SOURCE_FILE=target/wasm32-wasip1/release/$(PLUGIN_NAME).wasm
 DEST_DIR=$(HOME)/.config/zellij/plugins
 DEST_FILE=$(DEST_DIR)/$(PLUGIN_NAME).wasm
+DOCKER_IMAGE=$(PLUGIN_NAME)-builder
+DOCKER_EXPORT_DIR=target/wasm32-wasip1/release
 
 # CLI Overrides (Usage: make debug-layout L="MyLayout")
 L ?= BASE
-P ?= Module Editor
+P ?= LOGS
 
-.PHONY: all build install clean debug debug-layout debug-pane debug-kill flush-cache
+.PHONY: all build install clean debug debug-layout debug-pane debug-kill flush-cache docker-build install-docker
 
 # Default action: build and install
 all: build install
@@ -16,7 +18,7 @@ all: build install
 # Compile the Rust code for WASI in release mode
 # NOTE: Ensure the indented lines below use a physical TAB character
 build:
-	cargo build --release --target wasm32-wasip1
+	cargo build --release
 
 # Create the directory if it doesn't exist and move the plugin
 install:
@@ -26,6 +28,21 @@ install:
 	@echo "Successfully installed to: $(DEST_FILE)"
 	@echo "Zellij KDL path: file:$(DEST_FILE)"
 	@echo "------------------------------------------------"
+
+# Build plugin via Docker and extract .wasm + updated Cargo.lock
+docker-build:
+	DOCKER_BUILDKIT=1 docker build --target export \
+		--output type=local,dest=$(DOCKER_EXPORT_DIR) \
+		-t $(DOCKER_IMAGE) .
+	cp $(DOCKER_EXPORT_DIR)/Cargo.lock Cargo.lock
+	@echo "Extracted plugin to $(DOCKER_EXPORT_DIR)/$(PLUGIN_NAME).wasm"
+	@echo "Updated Cargo.lock from Docker build"
+
+# Install the docker-built plugin (requires docker-build first)
+install-docker:
+	mkdir -p $(DEST_DIR)
+	cp $(SOURCE_FILE) $(DEST_FILE)
+	@echo "Installed docker-built plugin to $(DEST_FILE)"
 
 # Clean the build artifacts
 clean:

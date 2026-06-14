@@ -1,7 +1,22 @@
 [package]
-name = "layoutswitch"
-version = "0.1.0"
+name = "zellij-layoutswitch"
+version = "0.2.0"
 edition = "2021"
+description = "A zellij plugin that helps switching between layouts and panes"
+repository = "https://github.com/sgtrusty/zellij-layoutswitch"
+readme = "README.md"
+keywords = ["zellij", "plugin", "layout", "pane", "switch"]
+categories = ["layout"]
+
+[lib]
+name = "zellij_layoutswitch"
+path = "src/lib.rs"
+
+[[bin]]
+name = "zellij-layoutswitch"
+path = "src/main.rs"
 
 [dependencies]
-zellij-tile = "0.43.1" # This is the version compatible with Zellij 0.43+
+zellij-tile = "0.44.3"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"

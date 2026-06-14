@@ -1,5 +1,4 @@
 - direction: Vertical
   run:
     plugin:
-      # Change this to the exact name from your [lib] section in Cargo.toml
-      location: "file:/home/abandon/.config/zellij/plugins/layoutswitch.wasm"
+      location: "file:./layoutswitch.wasm"

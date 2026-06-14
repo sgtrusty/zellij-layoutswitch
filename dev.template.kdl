@@ -2,7 +2,7 @@ layout {
     pane size=1 borderless=true { plugin location="zellij:tab-bar"; }
     
     pane split_direction="vertical" {
-        pane edit="src/main.rs" // Your code
+        pane edit="Makefile"
         
         pane {
             // Logs pane: Tails the Zellij log for debug info

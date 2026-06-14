@@ -5,7 +5,7 @@ layout {
     // 2. Main Workspace (Wrapped in a block to keep it above the plugin)
     pane {
         split_direction "vertical"
-        pane edit="src/main.rs"
+        pane edit="Makefile"
         
         pane {
             pane name="LOGS" {
@@ -16,7 +16,7 @@ layout {
             pane stacked=true {
                 pane size="10%" name="RELOAD PLUGIN (DOCKER)" {
                     command "bash"
-                    args "-c" "$doomstore/projs/virtualized/arch-safecode/bin/dvirtd.sh rust usedir,usemake,useforce && make debug"
+                    args "-c" "make docker-build && make debug"
                 }
             }
         }
