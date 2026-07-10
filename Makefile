@@ -10,17 +10,35 @@ DOCKER_EXPORT_DIR=target/wasm32-wasip1/release
 L ?= BASE
 P ?= LOGS
 
-.PHONY: all build install clean debug debug-layout debug-pane debug-kill flush-cache docker-build install-docker
+.PHONY: help build docker clean install debug debug-layout debug-pane debug-kill devel flush-cache logs
 
-# Default action: build and install
-all: build install
+# `make` with no target shows this help
+help:
+	@echo "Available targets:"
+	@echo "  make build         Build the plugin with cargo (wasm32-wasip1)"
+	@echo "  make docker        Build the plugin via Docker"
+	@echo "  make install       Install the built plugin to $(DEST_DIR)"
+	@echo "  make debug         Reload the plugin in the current Zellij session"
+	@echo "  make debug-layout  Focus a layout  (L=NAME, default: BASE)"
+	@echo "  make debug-pane    Focus a pane    (P=NAME, default: LOGS)"
+	@echo "  make debug-kill    Close the plugin"
+	@echo "  make devel         Launch Zellij with dev.kdl layout"
+	@echo "  make clean         Remove build artifacts"
+	@echo "  make flush-cache   Remove Zellij cache"
+	@echo "  make logs          Tail Zellij log"
 
 # Compile the Rust code for WASI in release mode
-# NOTE: Ensure the indented lines below use a physical TAB character
 build:
-	cargo build --release
+	cargo build --release --target wasm32-wasip1
 
-# Create the directory if it doesn't exist and move the plugin
+# Build the plugin via Docker and extract the .wasm
+docker:
+	DOCKER_BUILDKIT=1 docker build --target export \
+		--output type=local,dest=$(DOCKER_EXPORT_DIR) \
+		-t $(DOCKER_IMAGE) .
+	@echo "Extracted plugin to $(DOCKER_EXPORT_DIR)/$(PLUGIN_NAME).wasm"
+
+# Install the plugin to the local zellij plugins dir
 install:
 	mkdir -p $(DEST_DIR)
 	cp $(SOURCE_FILE) $(DEST_FILE)
@@ -28,21 +46,6 @@ install:
 	@echo "Successfully installed to: $(DEST_FILE)"
 	@echo "Zellij KDL path: file:$(DEST_FILE)"
 	@echo "------------------------------------------------"
-
-# Build plugin via Docker and extract .wasm + updated Cargo.lock
-docker-build:
-	DOCKER_BUILDKIT=1 docker build --target export \
-		--output type=local,dest=$(DOCKER_EXPORT_DIR) \
-		-t $(DOCKER_IMAGE) .
-	cp $(DOCKER_EXPORT_DIR)/Cargo.lock Cargo.lock
-	@echo "Extracted plugin to $(DOCKER_EXPORT_DIR)/$(PLUGIN_NAME).wasm"
-	@echo "Updated Cargo.lock from Docker build"
-
-# Install the docker-built plugin (requires docker-build first)
-install-docker:
-	mkdir -p $(DEST_DIR)
-	cp $(SOURCE_FILE) $(DEST_FILE)
-	@echo "Installed docker-built plugin to $(DEST_FILE)"
 
 # Clean the build artifacts
 clean:
@@ -56,18 +59,22 @@ debug:
 debug-layout:
 	zellij pipe -n focus-layout -- "$(L)"
 
-# Focus a pane (Default: Module Editor)
+# Focus a pane (Default: LOGS)
 debug-pane:
 	zellij pipe -n focus-pane -- "$(P)"
 
+# Close the plugin
 debug-kill:
-	zellij pipe -n focus-stop || true 
+	zellij pipe -n focus-stop || true
 
+# Launch Zellij with the dev layout
 devel:
 	zellij --layout dev.kdl
 
+# Remove Zellij cache
 flush-cache:
-	rm -rf /home/${USER}/.cache/zellij/*
+	rm -rf $(HOME)/.cache/zellij/*
 
+# Tail Zellij log
 logs:
-	tail /tmp/zellij-1000/zellij-log/zellij.log -f
+	tail -f /tmp/zellij-1000/zellij-log/zellij.log

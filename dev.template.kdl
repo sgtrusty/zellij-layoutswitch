@@ -1,3 +1,7 @@
+load_plugins {
+    "file:target/wasm32-wasip1/release/zellij-layoutswitch.wasm"
+}
+
 layout {
     pane size=1 borderless=true { plugin location="zellij:tab-bar"; }
     
