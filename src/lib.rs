@@ -41,6 +41,12 @@ pub struct LayoutWorker {
     last_pane_manifest: Option<PaneManifest>,
     /// Most recent tab info, cached so we can dump debug state immediately.
     last_tab_infos: Option<Vec<TabInfo>>,
+    /// Ordered cycle of swap layout names, discovered by observing switches.
+    layout_cycle: Vec<String>,
+    /// Whether a full rotation has been observed, completing the layout_cycle.
+    cycle_complete: bool,
+    /// Whether all needed switches have been fired (direct mode).
+    switches_fired: bool,
 }
 
 pub const LAYOUT_WORKER: &str = "layout";
@@ -81,45 +87,135 @@ impl LayoutWorker {
         None
     }
 
+    /// Record an observed layout name for cycle discovery.
+    fn record_layout(&mut self, layout: &str) {
+        if !self.layout_cycle.iter().any(|l| l == layout) {
+            self.layout_cycle.push(layout.to_string());
+        }
+    }
+
+    /// Whether a full layout rotation has been observed.
+    fn is_cycle_known(&self) -> bool {
+        self.cycle_complete
+    }
+
+    /// Get the current active layout from cached tab info.
+    fn get_current_layout(&self) -> Option<String> {
+        self.last_tab_infos
+            .as_ref()
+            .and_then(|tabs| tabs.iter().find(|t| t.active))
+            .and_then(|t| t.active_swap_layout_name.clone())
+    }
+
+    /// Compute forward steps from `from` to `to` within the discovered cycle.
+    fn compute_distance(&self, from: &str, to: &str) -> usize {
+        let len = self.layout_cycle.len();
+        if len == 0 {
+            return 0;
+        }
+        let from_idx = self.layout_cycle.iter().position(|l| l == from).unwrap_or(0);
+        let to_idx = self.layout_cycle.iter().position(|l| l == to).unwrap_or(0);
+        (to_idx + len - from_idx) % len
+    }
+
     /// Process an incoming tab update.
     ///
     /// If a [`target_layout`](Self::target_layout) is pending, advances the
-    /// swap-layout cycle toward it (with cycle detection).
+    /// swap-layout cycle toward it — either by checking arrival (direct mode)
+    /// or by stepping one layout at a time (discovery mode).
     fn handle_tab_update(&mut self, tab_infos: Vec<TabInfo>) {
         self.last_tab_infos = Some(tab_infos.clone());
-    
-        // 1. Use an early return or 'if let' to avoid deep nesting
-        let target_layout = match &self.target_layout {
-            Some(layout) => layout,
-            None => return,
-        };
-    
+
         let active_tab = match tab_infos.iter().find(|t| t.active) {
             Some(tab) => tab,
             None => return,
         };
-    
+
         let current_layout = active_tab
             .active_swap_layout_name
             .as_deref()
-            .unwrap_or("BASE");
-    
-        // 2. Success Condition
-        if current_layout.eq_ignore_ascii_case(target_layout) {
+            .unwrap_or("BASE")
+            .to_string();
+
+        self.record_layout(&current_layout);
+
+        let target_layout = match &self.target_layout {
+            Some(layout) => layout.clone(),
+            None => return,
+        };
+
+        // Phase 1: Direct mode — all switches fired, just confirm arrival
+        if self.switches_fired {
+            if current_layout.eq_ignore_ascii_case(&target_layout) {
+                self.reset_layout_process(&format!("LayoutSwitch: reached '{}'", target_layout));
+            } else {
+                self.retry_count += 1;
+                if self.retry_count >= MAX_LAYOUT_RETRIES {
+                    self.reset_layout_process(&format!(
+                        "LayoutSwitch: '{}' not reached after {} checks (direct mode)",
+                        target_layout, self.retry_count
+                    ));
+                }
+            }
+            return;
+        }
+
+        // Phase 2: Discovery — cycle not known, cycle through ALL layouts
+        if !self.cycle_complete {
+            if self.visited_layouts.contains(&current_layout) {
+                // Full rotation done — cycle is now complete
+                self.cycle_complete = true;
+                log(format!("Layout cycle discovered: {:?}", self.layout_cycle));
+                let distance = self.compute_distance(&current_layout, &target_layout);
+                if distance == 0 {
+                    self.reset_layout_process(&format!("LayoutSwitch: reached '{}'", target_layout));
+                    post_message_to_plugin(PluginMessage {
+                        name: "execute-action".to_string(),
+                        payload: "next-swap-layout".to_string(),
+                        worker_name: None,
+                    });
+                } else {
+                    log(format!(
+                        "Cycle discovered ({} layouts): firing {} switches to '{}'",
+                        self.layout_cycle.len(), distance, target_layout
+                    ));
+                    for _ in 0..distance {
+                        post_message_to_plugin(PluginMessage {
+                            name: "execute-action".to_string(),
+                            payload: "next-swap-layout".to_string(),
+                            worker_name: None,
+                        });
+                    }
+                    self.switches_fired = true;
+                    self.retry_count = 0;
+                }
+            } else {
+                self.visited_layouts.push(current_layout.clone());
+                self.retry_count += 1;
+                if self.retry_count >= MAX_LAYOUT_RETRIES {
+                    self.reset_layout_process(&format!(
+                        "LayoutSwitch: discovery failed after {} steps", self.retry_count
+                    ));
+                } else {
+                    post_message_to_plugin(PluginMessage {
+                        name: "execute-action".to_string(),
+                        payload: "next-swap-layout".to_string(),
+                        worker_name: None,
+                    });
+                }
+            }
+            return;
+        }
+
+        // Phase 3: Cycle known, step-by-step (mid-switch transition edge case)
+        if current_layout.eq_ignore_ascii_case(&target_layout) {
             self.reset_layout_process(&format!("LayoutSwitch: reached '{}'", target_layout));
             return;
         }
-    
-        // 3. Cycle Detection
-        if self.visited_layouts.contains(&current_layout.to_string()) {
-            self.reset_layout_process(&format!("LayoutSwitch: '{}' not found (cycle detected)", target_layout));
-            return;
-        }
-    
-        // 4. Retry Logic
-        self.visited_layouts.push(current_layout.to_string());
+
+        self.visited_layouts.push(current_layout.clone());
         self.retry_count += 1;
-    
+
         if self.retry_count >= MAX_LAYOUT_RETRIES {
             self.reset_layout_process(&format!(
                 "LayoutSwitch: '{}' not found after {} retries, giving up",
@@ -141,6 +237,7 @@ impl LayoutWorker {
         self.visited_layouts.clear();
         self.retry_count = 0;
         self.processing_layout = false;
+        self.switches_fired = false;
         self.update_status();
     }
 
@@ -215,15 +312,46 @@ impl ZellijWorker<'_> for LayoutWorker {
                     log("Layout switch already in progress, ignoring");
                     return;
                 }
-                self.target_layout = Some(payload);
+                self.target_layout = Some(payload.clone());
                 self.visited_layouts.clear();
                 self.retry_count = 0;
                 self.processing_layout = true;
-                post_message_to_plugin(PluginMessage {
-                    name: "execute-action".to_string(),
-                    payload: "next-swap-layout".to_string(),
-                    worker_name: None,
-                });
+                self.switches_fired = false;
+
+                if self.is_cycle_known() {
+                    if let Some(current) = self.get_current_layout() {
+                        let distance = self.compute_distance(&current, &payload);
+                        if distance == 0 {
+                            self.reset_layout_process(&format!("LayoutSwitch: already at '{}'", payload));
+                        } else {
+                            log(format!(
+                                "Cycle known ({} layouts): firing {} switches for '{}'",
+                                self.layout_cycle.len(), distance, payload
+                            ));
+                            for _ in 0..distance {
+                                post_message_to_plugin(PluginMessage {
+                                    name: "execute-action".to_string(),
+                                    payload: "next-swap-layout".to_string(),
+                                    worker_name: None,
+                                });
+                            }
+                            self.switches_fired = true;
+                        }
+                    } else {
+                        post_message_to_plugin(PluginMessage {
+                            name: "execute-action".to_string(),
+                            payload: "next-swap-layout".to_string(),
+                            worker_name: None,
+                        });
+                    }
+                } else {
+                    log(format!("Layout cycle unknown, starting discovery for '{}'", payload));
+                    post_message_to_plugin(PluginMessage {
+                        name: "execute-action".to_string(),
+                        payload: "next-swap-layout".to_string(),
+                        worker_name: None,
+                    });
+                }
                 self.update_status();
             }
             "focus-pane" => {
@@ -253,6 +381,8 @@ impl ZellijWorker<'_> for LayoutWorker {
                         log(format!("Tab: {}{} | Layout: {}", tab.name, marker, layout));
                     }
                 }
+                log("--- [DUMP] LAYOUT CYCLE ---");
+                log(format!("Cycle complete: {}, Layouts: {:?}", self.cycle_complete, self.layout_cycle));
                 self.update_status();
             }
             "focus-stop" => {
