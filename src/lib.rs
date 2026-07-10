@@ -17,6 +17,8 @@ pub struct State {
     status_message: String,
 }
 
+const MAX_LAYOUT_RETRIES: usize = 20;
+
 /// Background worker that manages layout switching and pane focus logic.
 ///
 /// Caches the latest [`PaneManifest`] and [`TabInfo`] so it can resolve pane
@@ -30,12 +32,21 @@ pub struct LayoutWorker {
     target_pane_title: Option<String>,
     /// Layout names visited during the current cycle, used for cycle detection.
     visited_layouts: Vec<String>,
+    /// How many `next-swap-layout` cycles have been sent for the current target.
+    retry_count: usize,
     /// Whether a layout-switch action is in progress.
-    processing_action: bool,
+    processing_layout: bool,
+    processing_pane: bool,
     /// Most recent pane manifest, cached so we can resolve titles immediately.
     last_pane_manifest: Option<PaneManifest>,
     /// Most recent tab info, cached so we can dump debug state immediately.
     last_tab_infos: Option<Vec<TabInfo>>,
+    /// Ordered cycle of swap layout names, discovered by observing switches.
+    layout_cycle: Vec<String>,
+    /// Whether a full rotation has been observed, completing the layout_cycle.
+    cycle_complete: bool,
+    /// Whether all needed switches have been fired (direct mode).
+    switches_fired: bool,
 }
 
 pub const LAYOUT_WORKER: &str = "layout";
@@ -60,9 +71,10 @@ impl LayoutWorker {
                     worker_name: None,
                 });
                 self.target_pane_title = None;
+                self.processing_pane = false;
+                self.update_status();
             }
         }
-        self.update_status();
     }
 
     /// Scan the manifest for a pane whose title matches `target`.
@@ -75,33 +87,116 @@ impl LayoutWorker {
         None
     }
 
+    /// Record an observed layout name for cycle discovery.
+    fn record_layout(&mut self, layout: &str) {
+        if !self.layout_cycle.iter().any(|l| l == layout) {
+            self.layout_cycle.push(layout.to_string());
+        }
+    }
+
+    /// Whether a full layout rotation has been observed.
+    fn is_cycle_known(&self) -> bool {
+        self.cycle_complete
+    }
+
+    /// Get the current active layout from cached tab info.
+    fn get_current_layout(&self) -> Option<String> {
+        self.last_tab_infos
+            .as_ref()
+            .and_then(|tabs| tabs.iter().find(|t| t.active))
+            .and_then(|t| t.active_swap_layout_name.clone())
+    }
+
+    /// Compute forward steps from `from` to `to` within the discovered cycle.
+    fn compute_distance(&self, from: &str, to: &str) -> usize {
+        let len = self.layout_cycle.len();
+        if len == 0 {
+            return 0;
+        }
+        let from_idx = self.layout_cycle.iter().position(|l| l == from).unwrap_or(0);
+        let to_idx = self.layout_cycle.iter().position(|l| l == to).unwrap_or(0);
+        (to_idx + len - from_idx) % len
+    }
+
     /// Process an incoming tab update.
     ///
     /// If a [`target_layout`](Self::target_layout) is pending, advances the
-    /// swap-layout cycle toward it (with cycle detection).
+    /// swap-layout cycle toward it — either by checking arrival (direct mode)
+    /// or by stepping one layout at a time (discovery mode).
     fn handle_tab_update(&mut self, tab_infos: Vec<TabInfo>) {
         self.last_tab_infos = Some(tab_infos.clone());
-        if let Some(ref target_layout) = self.target_layout.clone() {
-            if let Some(active_tab) = tab_infos.iter().find(|t| t.active) {
-                let current_layout = active_tab
-                    .active_swap_layout_name
-                    .clone()
-                    .unwrap_or_else(|| "BASE".to_string());
 
-                if current_layout.eq_ignore_ascii_case(target_layout) {
-                    log(format!("LayoutSwitch: reached '{}'", target_layout));
-                    self.target_layout = None;
-                    self.visited_layouts.clear();
-                    self.processing_action = false;
-                } else if self.visited_layouts.last() == Some(&current_layout) {
-                    // no-op: still on the same layout, wait for the next update
-                } else if self.visited_layouts.contains(&current_layout) {
-                    log(format!("LayoutSwitch: '{}' not found (cycle detected)", target_layout));
-                    self.target_layout = None;
-                    self.visited_layouts.clear();
-                    self.processing_action = false;
+        let active_tab = match tab_infos.iter().find(|t| t.active) {
+            Some(tab) => tab,
+            None => return,
+        };
+
+        let current_layout = active_tab
+            .active_swap_layout_name
+            .as_deref()
+            .unwrap_or("BASE")
+            .to_string();
+
+        self.record_layout(&current_layout);
+
+        let target_layout = match &self.target_layout {
+            Some(layout) => layout.clone(),
+            None => return,
+        };
+
+        // Phase 1: Direct mode — all switches fired, just confirm arrival
+        if self.switches_fired {
+            if current_layout.eq_ignore_ascii_case(&target_layout) {
+                self.reset_layout_process(&format!("LayoutSwitch: reached '{}'", target_layout));
+            } else {
+                self.retry_count += 1;
+                if self.retry_count >= MAX_LAYOUT_RETRIES {
+                    self.reset_layout_process(&format!(
+                        "LayoutSwitch: '{}' not reached after {} checks (direct mode)",
+                        target_layout, self.retry_count
+                    ));
+                }
+            }
+            return;
+        }
+
+        // Phase 2: Discovery — cycle not known, cycle through ALL layouts
+        if !self.cycle_complete {
+            if self.visited_layouts.contains(&current_layout) {
+                // Full rotation done — cycle is now complete
+                self.cycle_complete = true;
+                log(format!("Layout cycle discovered: {:?}", self.layout_cycle));
+                let distance = self.compute_distance(&current_layout, &target_layout);
+                if distance == 0 {
+                    self.reset_layout_process(&format!("LayoutSwitch: reached '{}'", target_layout));
+                    post_message_to_plugin(PluginMessage {
+                        name: "execute-action".to_string(),
+                        payload: "next-swap-layout".to_string(),
+                        worker_name: None,
+                    });
                 } else {
-                    self.visited_layouts.push(current_layout);
+                    log(format!(
+                        "Cycle discovered ({} layouts): firing {} switches to '{}'",
+                        self.layout_cycle.len(), distance, target_layout
+                    ));
+                    for _ in 0..distance {
+                        post_message_to_plugin(PluginMessage {
+                            name: "execute-action".to_string(),
+                            payload: "next-swap-layout".to_string(),
+                            worker_name: None,
+                        });
+                    }
+                    self.switches_fired = true;
+                    self.retry_count = 0;
+                }
+            } else {
+                self.visited_layouts.push(current_layout.clone());
+                self.retry_count += 1;
+                if self.retry_count >= MAX_LAYOUT_RETRIES {
+                    self.reset_layout_process(&format!(
+                        "LayoutSwitch: discovery failed after {} steps", self.retry_count
+                    ));
+                } else {
                     post_message_to_plugin(PluginMessage {
                         name: "execute-action".to_string(),
                         payload: "next-swap-layout".to_string(),
@@ -109,16 +204,53 @@ impl LayoutWorker {
                     });
                 }
             }
+            return;
         }
+
+        // Phase 3: Cycle known, step-by-step (mid-switch transition edge case)
+        if current_layout.eq_ignore_ascii_case(&target_layout) {
+            self.reset_layout_process(&format!("LayoutSwitch: reached '{}'", target_layout));
+            return;
+        }
+
+        self.visited_layouts.push(current_layout.clone());
+        self.retry_count += 1;
+
+        if self.retry_count >= MAX_LAYOUT_RETRIES {
+            self.reset_layout_process(&format!(
+                "LayoutSwitch: '{}' not found after {} retries, giving up",
+                target_layout, self.retry_count
+            ));
+        } else {
+            post_message_to_plugin(PluginMessage {
+                name: "execute-action".to_string(),
+                payload: "next-swap-layout".to_string(),
+                worker_name: None,
+            });
+        }
+    }
+    
+    // 5. Helper method to reduce code duplication
+    fn reset_layout_process(&mut self, message: &str) {
+        log(message.to_string());
+        self.target_layout = None;
+        self.visited_layouts.clear();
+        self.retry_count = 0;
+        self.processing_layout = false;
+        self.switches_fired = false;
         self.update_status();
     }
 
     fn handle_permission_result(&mut self, result: PermissionStatus) {
-         if result == PermissionStatus::Granted {
-             log("Permission granted, hiding self");
-             post_message_to_plugin(PluginMessage::new_to_plugin("execute-action", "hide-self"));
+         match result {
+             PermissionStatus::Granted => {
+                 log("Permission granted");
+             }
+             PermissionStatus::Denied => {
+                 log("Permission denied - plugin actions (layout switch, pane focus) will not work");
+                 log("If loaded via load_permissions, pre-grant permissions in ~/.cache/zellij/permissions.kdl");
+             }
          }
-         self.update_status();
     }
 
     /// If a [`target_pane_title`](Self::target_pane_title) is pending, try to
@@ -136,6 +268,7 @@ impl LayoutWorker {
                         worker_name: None,
                     });
                     self.target_pane_title = None;
+                    self.processing_pane = false;
                 }
             }
         }
@@ -175,17 +308,58 @@ impl ZellijWorker<'_> for LayoutWorker {
                 }
             }
             "focus-layout" => {
-                self.target_layout = Some(payload);
+                if self.processing_layout {
+                    log("Layout switch already in progress, ignoring");
+                    return;
+                }
+                self.target_layout = Some(payload.clone());
                 self.visited_layouts.clear();
-                self.processing_action = true;
-                post_message_to_plugin(PluginMessage {
-                    name: "execute-action".to_string(),
-                    payload: "next-swap-layout".to_string(),
-                    worker_name: None,
-                });
+                self.retry_count = 0;
+                self.processing_layout = true;
+                self.switches_fired = false;
+
+                if self.is_cycle_known() {
+                    if let Some(current) = self.get_current_layout() {
+                        let distance = self.compute_distance(&current, &payload);
+                        if distance == 0 {
+                            self.reset_layout_process(&format!("LayoutSwitch: already at '{}'", payload));
+                        } else {
+                            log(format!(
+                                "Cycle known ({} layouts): firing {} switches for '{}'",
+                                self.layout_cycle.len(), distance, payload
+                            ));
+                            for _ in 0..distance {
+                                post_message_to_plugin(PluginMessage {
+                                    name: "execute-action".to_string(),
+                                    payload: "next-swap-layout".to_string(),
+                                    worker_name: None,
+                                });
+                            }
+                            self.switches_fired = true;
+                        }
+                    } else {
+                        post_message_to_plugin(PluginMessage {
+                            name: "execute-action".to_string(),
+                            payload: "next-swap-layout".to_string(),
+                            worker_name: None,
+                        });
+                    }
+                } else {
+                    log(format!("Layout cycle unknown, starting discovery for '{}'", payload));
+                    post_message_to_plugin(PluginMessage {
+                        name: "execute-action".to_string(),
+                        payload: "next-swap-layout".to_string(),
+                        worker_name: None,
+                    });
+                }
                 self.update_status();
             }
             "focus-pane" => {
+                if self.processing_pane {
+                    log("Action already in progress, ignoring");
+                    return;
+                }
+                self.processing_pane = true;
                 self.target_pane_title = Some(payload);
                 self.try_focus_from_cache();
                 self.update_status();
@@ -207,6 +381,8 @@ impl ZellijWorker<'_> for LayoutWorker {
                         log(format!("Tab: {}{} | Layout: {}", tab.name, marker, layout));
                     }
                 }
+                log("--- [DUMP] LAYOUT CYCLE ---");
+                log(format!("Cycle complete: {}, Layouts: {:?}", self.cycle_complete, self.layout_cycle));
                 self.update_status();
             }
             "focus-stop" => {
@@ -253,9 +429,9 @@ impl ZellijPlugin for State {
         let mut should_render = false;
         match event {
             Event::CustomMessage(message_name, payload) => {
-                self.status_message = payload.clone();
                 match message_name.as_str() {
                     "update-status" => {
+                        self.status_message = payload;
                         should_render = true;
                     }
                     "execute-action" => {

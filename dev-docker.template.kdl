@@ -1,3 +1,7 @@
+load_plugins {
+    "file:target/wasm32-wasip1/release/zellij-layoutswitch.wasm"
+}
+
 layout {
     // 1. Tab Bar
     pane size=1 borderless=true { plugin location="zellij:tab-bar"; }
@@ -16,7 +20,7 @@ layout {
             pane stacked=true {
                 pane size="10%" name="RELOAD PLUGIN (DOCKER)" {
                     command "bash"
-                    args "-c" "make docker-build && make debug"
+                    args "-c" "make docker && make debug"
                 }
             }
         }
