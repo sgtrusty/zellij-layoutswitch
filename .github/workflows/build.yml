@@ -25,6 +25,8 @@ jobs:
           echo "version=$ver" >> "$GITHUB_OUTPUT"
 
   unit-test:
+    needs: [check]
+    if: needs.check.outputs.version != ''
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -33,6 +35,8 @@ jobs:
       - uses: ./.github/actions/unit-test
 
   coverage:
+    needs: [check]
+    if: needs.check.outputs.version != ''
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
