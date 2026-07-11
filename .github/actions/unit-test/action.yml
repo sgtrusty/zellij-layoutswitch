@@ -1,8 +1,8 @@
 name: "Unit Test"
-description: "Run Rust unit tests (lib only)"
+description: "Run Rust tests (all test types)"
 
 runs:
   using: "composite"
   steps:
-    - name: Run unit tests
-      run: cargo test --lib
+    - name: Run tests
+      run: cargo test
