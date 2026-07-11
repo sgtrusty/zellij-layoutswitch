@@ -1,0 +1,26 @@
+name: "Coverage"
+description: "Generate test coverage report and upload artifact"
+
+inputs:
+  retention-days:
+    description: "Artifact retention in days"
+    required: false
+    default: "7"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Install tarpaulin
+      run: cargo install cargo-tarpaulin
+      shell: bash
+
+    - name: Generate coverage report
+      run: cargo tarpaulin --all-features --engine llvm --out Xml --output-dir ./coverage --target x86_64-unknown-linux-gnu
+      shell: bash
+
+    - name: Upload coverage artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-report
+        path: coverage/*.xml
+        retention-days: ${{ inputs.retention-days }}
