@@ -24,16 +24,18 @@ jobs:
           echo "version=$ver" >> "$GITHUB_OUTPUT"
 
   unit-test:
+    needs: [check]
+    if: needs.check.outputs.version != ''
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions-rust-lang/setup-rust-toolchain@v1
       - uses: Swatinem/rust-cache@v2
-      - name: Run tests
-        run: cargo test
-        shell: bash
+      - uses: ./.github/actions/unit-test
 
   coverage:
+    needs: [check]
+    if: needs.check.outputs.version != ''
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

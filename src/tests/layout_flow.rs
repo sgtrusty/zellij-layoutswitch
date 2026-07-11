@@ -398,7 +398,7 @@ fn discovery_cycle_with_distance_fires_multiple_switches() {
 
 #[test]
 fn discovery_exhausted_after_max_retries() {
-    let port = install();
+    let _port = install();
     let mut worker = LayoutWorker::default();
     worker.target_layout = Some("C".into());
     worker.retry_count = MAX_LAYOUT_RETRIES - 1;
@@ -435,7 +435,7 @@ fn cycle_complete_already_at_target_resets() {
 
 #[test]
 fn cycle_complete_retry_exhausted_gives_up() {
-    let port = install();
+    let _port = install();
     let mut worker = LayoutWorker::default();
     worker.cycle_complete = true;
     worker.layout_cycle = vec!["A".into(), "B".into(), "C".into()];

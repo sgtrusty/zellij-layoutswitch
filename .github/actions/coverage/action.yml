@@ -26,6 +26,10 @@ runs:
       run: cargo install cargo-tarpaulin --version ${{ inputs.tarpaulin-version }} --locked
       shell: bash
 
+    - name: Install wasm32-wasip1 target
+      run: rustup target add wasm32-wasip1
+      shell: bash
+
     - name: Generate coverage report
       run: cargo tarpaulin --all-features --engine llvm --out Html --output-dir ./coverage --target x86_64-unknown-linux-gnu
       shell: bash

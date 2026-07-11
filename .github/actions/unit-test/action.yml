@@ -1,9 +1,9 @@
 name: "Unit Test"
-description: "Run Rust tests (all test types)"
+description: "Run Rust tests on the host target (tests cannot execute on wasm)"
 
 runs:
   using: "composite"
   steps:
     - name: Run tests
-      run: cargo test
+      run: cargo test --target x86_64-unknown-linux-gnu
       shell: bash
