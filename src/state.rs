@@ -2,6 +2,7 @@ use zellij_tile::prelude::*;
 use std::collections::BTreeMap;
 
 use crate::message::Message;
+use crate::output_port::{output_port, OutputPort};
 
 /// Plugin-side state. Receives events from Zellij and routes them to the worker.
 #[derive(Default)]
@@ -51,17 +52,17 @@ impl ZellijPlugin for State {
             }
             Event::PaneUpdate(pane_manifest) => {
                 if let Some(msg) = Message::pane_update(&pane_manifest) {
-                    post_message_to(msg.to_worker());
+                    output_port().post_to(msg.to_worker());
                 }
             }
             Event::TabUpdate(tab_infos) => {
                 if let Some(msg) = Message::tab_update(&tab_infos) {
-                    post_message_to(msg.to_worker());
+                    output_port().post_to(msg.to_worker());
                 }
             }
             Event::PermissionRequestResult(result) => {
                 if let Some(msg) = Message::permission_result(&result) {
-                    post_message_to(msg.to_worker());
+                    output_port().post_to(msg.to_worker());
                 }
             }
             _ => (),
@@ -76,6 +77,6 @@ impl ZellijPlugin for State {
 
 impl State {
     fn forward_to_worker(&mut self, command: &str, payload: &str) {
-        post_message_to(Message::new(command, payload).to_worker());
+        output_port().post_to(Message::new(command, payload).to_worker());
     }
 }

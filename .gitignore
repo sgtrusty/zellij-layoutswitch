@@ -14,6 +14,13 @@ target/
 # Custom workflow 
 dev.kdl
 
+# tests
+test-output.txt
+
+# coverage
+coverage/
+coverage-output.txt
+
 # Dependency locks (Optional)
 # Remove Cargo.lock from gitignore for executable projects
 # Keep Cargo.lock in gitignore for library projects

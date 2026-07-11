@@ -1,0 +1,5 @@
+---
+source: tests/worker_dispatch.rs
+expression: status
+---
+plugin-layoutswitch: switching to layout 'compact'

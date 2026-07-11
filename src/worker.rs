@@ -2,10 +2,11 @@ use zellij_tile::prelude::*;
 use serde::{Serialize, Deserialize};
 
 use crate::{log, message::Message};
+use crate::output_port::{output_port, OutputPort};
 
 pub const LAYOUT_WORKER: &str = "layout";
 
-pub(crate) const MAX_LAYOUT_RETRIES: usize = 20;
+#[doc(hidden)] pub const MAX_LAYOUT_RETRIES: usize = 20;
 
 /// Background worker that manages layout switching and pane focus logic.
 ///
@@ -14,17 +15,17 @@ pub(crate) const MAX_LAYOUT_RETRIES: usize = 20;
 /// plugin to re-send stale data.
 #[derive(Default, Serialize, Deserialize)]
 pub struct LayoutWorker {
-    pub(crate) target_layout: Option<String>,
-    pub(crate) target_pane_title: Option<String>,
-    pub(crate) visited_layouts: Vec<String>,
-    pub(crate) retry_count: usize,
-    pub(crate) processing_layout: bool,
-    pub(crate) processing_pane: bool,
-    pub(crate) last_pane_manifest: Option<PaneManifest>,
-    pub(crate) last_tab_infos: Option<Vec<TabInfo>>,
-    pub(crate) layout_cycle: Vec<String>,
-    pub(crate) cycle_complete: bool,
-    pub(crate) switches_fired: bool,
+    #[doc(hidden)] pub target_layout: Option<String>,
+    #[doc(hidden)] pub target_pane_title: Option<String>,
+    #[doc(hidden)] pub visited_layouts: Vec<String>,
+    #[doc(hidden)] pub retry_count: usize,
+    #[doc(hidden)] pub processing_layout: bool,
+    #[doc(hidden)] pub processing_pane: bool,
+    #[doc(hidden)] pub last_pane_manifest: Option<PaneManifest>,
+    #[doc(hidden)] pub last_tab_infos: Option<Vec<TabInfo>>,
+    #[doc(hidden)] pub layout_cycle: Vec<String>,
+    #[doc(hidden)] pub cycle_complete: bool,
+    #[doc(hidden)] pub switches_fired: bool,
 }
 
 impl ZellijWorker<'_> for LayoutWorker {
@@ -69,16 +70,16 @@ impl ZellijWorker<'_> for LayoutWorker {
                                 self.layout_cycle.len(), distance, msg.payload()
                             ));
                             for _ in 0..distance {
-                                post_message_to_plugin(Message::execute_action(crate::message::ACTION_NEXT_SWAP_LAYOUT).to_plugin());
+                                output_port().post_to_plugin(Message::execute_action(crate::message::ACTION_NEXT_SWAP_LAYOUT).to_plugin());
                             }
                             self.switches_fired = true;
                         }
                     } else {
-                        post_message_to_plugin(Message::execute_action(crate::message::ACTION_NEXT_SWAP_LAYOUT).to_plugin());
+                        output_port().post_to_plugin(Message::execute_action(crate::message::ACTION_NEXT_SWAP_LAYOUT).to_plugin());
                     }
                 } else {
                     log(format!("Layout cycle unknown, starting discovery for '{}'", msg.payload()));
-                    post_message_to_plugin(Message::execute_action(crate::message::ACTION_NEXT_SWAP_LAYOUT).to_plugin());
+                    output_port().post_to_plugin(Message::execute_action(crate::message::ACTION_NEXT_SWAP_LAYOUT).to_plugin());
                 }
                 self.update_status();
             }
@@ -114,7 +115,7 @@ impl ZellijWorker<'_> for LayoutWorker {
                 self.update_status();
             }
             "focus-stop" => {
-                post_message_to_plugin(Message::execute_action(crate::message::ACTION_CLOSE_SELF).to_plugin());
+                output_port().post_to_plugin(Message::execute_action(crate::message::ACTION_CLOSE_SELF).to_plugin());
             }
             _ => ()
         }

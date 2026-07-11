@@ -1,0 +1,5 @@
+---
+source: tests/layout_flow.rs
+expression: status
+---
+plugin-layoutswitch: IDLE
