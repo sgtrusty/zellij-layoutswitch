@@ -27,7 +27,7 @@ pub(crate) const ACTION_HIDE_SELF: &str = "hide-self";
 /// Construct via the named factory methods, then call [`to_plugin`](Self::to_plugin)
 /// to turn it into a [`PluginMessage`] or [`act`](Self::act) to dispatch it on
 /// the plugin thread.
-pub(crate) struct Message {
+pub struct Message {
     name: String,
     payload: String,
 }
