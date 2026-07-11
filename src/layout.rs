@@ -5,7 +5,7 @@ use crate::output_port::{output_port, OutputPort};
 use crate::worker::{LayoutWorker, MAX_LAYOUT_RETRIES};
 
 impl LayoutWorker {
-    #[doc(hidden)] pub fn handle_pane_update(&mut self, pane_manifest: PaneManifest) {
+    pub(crate) fn handle_pane_update(&mut self, pane_manifest: PaneManifest) {
         self.last_pane_manifest = Some(pane_manifest.clone());
         if let Some(ref target_pane_title) = self.target_pane_title.clone() {
             let pane_id = self.find_pane_by_title(&pane_manifest, target_pane_title);
@@ -18,7 +18,7 @@ impl LayoutWorker {
         }
     }
 
-    #[doc(hidden)] pub fn find_pane_by_title(&self, pane_manifest: &PaneManifest, target: &str) -> Option<u32> {
+    pub(crate) fn find_pane_by_title(&self, pane_manifest: &PaneManifest, target: &str) -> Option<u32> {
         for panes in pane_manifest.panes.values() {
             if let Some(pane) = panes.iter().find(|p| p.title.trim() == target.trim()) {
                 return Some(pane.id);
@@ -27,24 +27,24 @@ impl LayoutWorker {
         None
     }
 
-    #[doc(hidden)] pub fn record_layout(&mut self, layout: &str) {
+    pub(crate) fn record_layout(&mut self, layout: &str) {
         if !self.layout_cycle.iter().any(|l| l == layout) {
             self.layout_cycle.push(layout.to_string());
         }
     }
 
-    #[doc(hidden)] pub fn is_cycle_known(&self) -> bool {
+    pub(crate) fn is_cycle_known(&self) -> bool {
         self.cycle_complete
     }
 
-    #[doc(hidden)] pub fn get_current_layout(&self) -> Option<String> {
+    pub(crate) fn get_current_layout(&self) -> Option<String> {
         self.last_tab_infos
             .as_ref()
             .and_then(|tabs| tabs.iter().find(|t| t.active))
             .and_then(|t| t.active_swap_layout_name.clone())
     }
 
-    #[doc(hidden)] pub fn compute_distance(&self, from: &str, to: &str) -> usize {
+    pub(crate) fn compute_distance(&self, from: &str, to: &str) -> usize {
         let len = self.layout_cycle.len();
         if len == 0 {
             return 0;
@@ -54,7 +54,7 @@ impl LayoutWorker {
         (to_idx + len - from_idx) % len
     }
 
-    #[doc(hidden)] pub fn handle_tab_update(&mut self, tab_infos: Vec<TabInfo>) {
+    pub(crate) fn handle_tab_update(&mut self, tab_infos: Vec<TabInfo>) {
         self.last_tab_infos = Some(tab_infos.clone());
 
         let active_tab = match tab_infos.iter().find(|t| t.active) {
@@ -141,7 +141,7 @@ impl LayoutWorker {
         }
     }
 
-    #[doc(hidden)] pub fn reset_layout_process(&mut self, message: &str) {
+    pub(crate) fn reset_layout_process(&mut self, message: &str) {
         log(message.to_string());
         self.target_layout = None;
         self.visited_layouts.clear();
@@ -151,7 +151,7 @@ impl LayoutWorker {
         self.update_status();
     }
 
-    #[doc(hidden)] pub fn handle_permission_result(&mut self, result: PermissionStatus) {
+    pub(crate) fn handle_permission_result(&mut self, result: PermissionStatus) {
          match result {
              PermissionStatus::Granted => {
                  log("Permission granted");
@@ -163,7 +163,7 @@ impl LayoutWorker {
          }
     }
 
-    #[doc(hidden)] pub fn try_focus_from_cache(&mut self) {
+    pub(crate) fn try_focus_from_cache(&mut self) {
         if let Some(ref target_pane_title) = self.target_pane_title.clone() {
             if let Some(ref pane_manifest) = self.last_pane_manifest {
                 let pane_id = self.find_pane_by_title(pane_manifest, target_pane_title);
@@ -176,7 +176,7 @@ impl LayoutWorker {
         }
     }
 
-    #[doc(hidden)] pub fn update_status(&self) {
+    pub(crate) fn update_status(&self) {
         let status = match (&self.target_layout, &self.target_pane_title) {
             (Some(layout), _) => format!("plugin-layoutswitch: switching to layout '{}'", layout),
             (_, Some(pane)) => format!("plugin-layoutswitch: focusing pane '{}'", pane),

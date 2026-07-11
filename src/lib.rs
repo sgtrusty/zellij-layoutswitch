@@ -28,14 +28,15 @@ pub(crate) fn log(msg: impl std::fmt::Display) {
 #[no_mangle]
 pub unsafe extern "C" fn host_run_plugin_command() {}
 
-/// Re-exports for integration tests only.
-#[doc(hidden)]
-#[allow(unused_imports)]
-pub mod test_support {
-    pub use crate::message::{
-        Message, MSG_PANE_UPDATE, MSG_TAB_UPDATE, MSG_PERMISSION_RESULT,
-        MSG_EXECUTE_ACTION, MSG_FOCUS_PANE, MSG_UPDATE_STATUS,
-        ACTION_NEXT_SWAP_LAYOUT, ACTION_CLOSE_SELF, ACTION_HIDE_SELF,
-    };
-    pub use crate::worker::MAX_LAYOUT_RETRIES;
-}
+// Integration-style tests kept inside the crate (under `src/tests/`) so the
+// internal items they exercise can stay `pub(crate)` instead of being exposed
+// as `pub` + `#[doc(hidden)]` in the public API.
+#[cfg(test)]
+#[path = "tests/layout_flow.rs"]
+mod layout_flow;
+#[cfg(test)]
+#[path = "tests/state_routing.rs"]
+mod state_routing;
+#[cfg(test)]
+#[path = "tests/worker_dispatch.rs"]
+mod worker_dispatch;

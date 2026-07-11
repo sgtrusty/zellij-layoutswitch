@@ -1,6 +1,6 @@
-use zellij_layoutswitch::{RecordingPort, LayoutWorker};
-use zellij_layoutswitch::output_port::{set_port, clear_port};
-use zellij_layoutswitch::test_support::{Message, MSG_EXECUTE_ACTION, MSG_FOCUS_PANE, ACTION_NEXT_SWAP_LAYOUT, ACTION_CLOSE_SELF};
+use crate::output_port::{RecordingPort, set_port, clear_port};
+use crate::worker::LayoutWorker;
+use crate::message::{Message, MSG_EXECUTE_ACTION, MSG_FOCUS_PANE, ACTION_NEXT_SWAP_LAYOUT, ACTION_CLOSE_SELF};
 use zellij_tile::prelude::*;
 
 fn install() -> RecordingPort {

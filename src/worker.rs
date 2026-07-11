@@ -6,7 +6,7 @@ use crate::output_port::{output_port, OutputPort};
 
 pub const LAYOUT_WORKER: &str = "layout";
 
-#[doc(hidden)] pub const MAX_LAYOUT_RETRIES: usize = 20;
+pub(crate) const MAX_LAYOUT_RETRIES: usize = 20;
 
 /// Background worker that manages layout switching and pane focus logic.
 ///
@@ -15,17 +15,17 @@ pub const LAYOUT_WORKER: &str = "layout";
 /// plugin to re-send stale data.
 #[derive(Default, Serialize, Deserialize)]
 pub struct LayoutWorker {
-    #[doc(hidden)] pub target_layout: Option<String>,
-    #[doc(hidden)] pub target_pane_title: Option<String>,
-    #[doc(hidden)] pub visited_layouts: Vec<String>,
-    #[doc(hidden)] pub retry_count: usize,
-    #[doc(hidden)] pub processing_layout: bool,
-    #[doc(hidden)] pub processing_pane: bool,
-    #[doc(hidden)] pub last_pane_manifest: Option<PaneManifest>,
-    #[doc(hidden)] pub last_tab_infos: Option<Vec<TabInfo>>,
-    #[doc(hidden)] pub layout_cycle: Vec<String>,
-    #[doc(hidden)] pub cycle_complete: bool,
-    #[doc(hidden)] pub switches_fired: bool,
+    pub(crate) target_layout: Option<String>,
+    pub(crate) target_pane_title: Option<String>,
+    pub(crate) visited_layouts: Vec<String>,
+    pub(crate) retry_count: usize,
+    pub(crate) processing_layout: bool,
+    pub(crate) processing_pane: bool,
+    pub(crate) last_pane_manifest: Option<PaneManifest>,
+    pub(crate) last_tab_infos: Option<Vec<TabInfo>>,
+    pub(crate) layout_cycle: Vec<String>,
+    pub(crate) cycle_complete: bool,
+    pub(crate) switches_fired: bool,
 }
 
 impl ZellijWorker<'_> for LayoutWorker {

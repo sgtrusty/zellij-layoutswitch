@@ -1,5 +1,5 @@
 ---
-source: tests/layout_flow.rs
+source: src/tests/worker_dispatch.rs
 expression: status
 ---
 plugin-layoutswitch: focusing pane 'Terminal 1'

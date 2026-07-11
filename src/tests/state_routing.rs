@@ -1,6 +1,6 @@
-use zellij_layoutswitch::{RecordingPort, State};
-use zellij_layoutswitch::output_port::{set_port, clear_port};
-use zellij_layoutswitch::test_support::{MSG_PANE_UPDATE, MSG_TAB_UPDATE, MSG_PERMISSION_RESULT, MSG_EXECUTE_ACTION, MSG_UPDATE_STATUS, ACTION_NEXT_SWAP_LAYOUT};
+use crate::output_port::{RecordingPort, set_port, clear_port};
+use crate::State;
+use crate::message::{MSG_PANE_UPDATE, MSG_TAB_UPDATE, MSG_PERMISSION_RESULT, MSG_EXECUTE_ACTION, MSG_UPDATE_STATUS, ACTION_NEXT_SWAP_LAYOUT};
 use zellij_tile::prelude::*;
 
 fn install() -> RecordingPort {

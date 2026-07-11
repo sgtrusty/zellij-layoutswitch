@@ -39,16 +39,15 @@ WORKDIR /app
 
 COPY --chown=appuser:appgroup Cargo.toml Cargo.lock ./
 COPY --chown=appuser:appgroup src ./src
-COPY --chown=appuser:appgroup tests ./tests
 
-# Run tests with INSTA_UPDATE=always to auto-accept snapshots
-# No .cargo/config.toml — must compile for host target, not wasm
+# Tests live inside the crate under src/tests/ (included via #[cfg(test)] #[path]),
+# so no separate `tests/` directory is copied.
 RUN --mount=type=cache,target=/usr/local/cargo/registry,uid=10001,gid=10001 \
     --mount=type=cache,target=/app/target,uid=10001,gid=10001 \
     INSTA_UPDATE=always cargo test 2>&1 | tee /app/test-output.txt; \
     EXIT=$?; \
     mkdir -p /app/snapshots-out; \
-    cp -r /app/tests/snapshots /app/snapshots-out/tests-snapshots 2>/dev/null || true; \
+    cp -r /app/src/tests/snapshots /app/snapshots-out/tests-snapshots 2>/dev/null || true; \
     cp /app/test-output.txt /app/snapshots-out/; \
     exit $EXIT
 
@@ -77,8 +76,8 @@ RUN cargo install cargo-tarpaulin --version 0.37.0
 
 COPY --chown=appuser:appgroup Cargo.toml Cargo.lock ./
 COPY --chown=appuser:appgroup src ./src
-COPY --chown=appuser:appgroup tests ./tests
 
+# Tests live inside the crate under src/tests/ — no separate `tests/` directory.
 RUN INSTA_UPDATE=always cargo tarpaulin \
     --engine llvm \
     --include-files 'src/*' \

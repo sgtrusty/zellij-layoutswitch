@@ -6,18 +6,18 @@ use crate::output_port::OutputPort;
 
 // ── Message name constants ──────────────────────────────────────────
 
-#[doc(hidden)] pub const MSG_PANE_UPDATE: &str = "pane-update";
-#[doc(hidden)] pub const MSG_TAB_UPDATE: &str = "tab-update";
-#[doc(hidden)] pub const MSG_PERMISSION_RESULT: &str = "permission-result";
-#[doc(hidden)] pub const MSG_EXECUTE_ACTION: &str = "execute-action";
-#[doc(hidden)] pub const MSG_FOCUS_PANE: &str = "do-focus-pane";
-#[doc(hidden)] pub const MSG_UPDATE_STATUS: &str = "update-status";
+pub(crate) const MSG_PANE_UPDATE: &str = "pane-update";
+pub(crate) const MSG_TAB_UPDATE: &str = "tab-update";
+pub(crate) const MSG_PERMISSION_RESULT: &str = "permission-result";
+pub(crate) const MSG_EXECUTE_ACTION: &str = "execute-action";
+pub(crate) const MSG_FOCUS_PANE: &str = "do-focus-pane";
+pub(crate) const MSG_UPDATE_STATUS: &str = "update-status";
 
 // ── Action payload constants ────────────────────────────────────────
 
-#[doc(hidden)] pub const ACTION_NEXT_SWAP_LAYOUT: &str = "next-swap-layout";
-#[doc(hidden)] pub const ACTION_CLOSE_SELF: &str = "close-self";
-#[doc(hidden)] pub const ACTION_HIDE_SELF: &str = "hide-self";
+pub(crate) const ACTION_NEXT_SWAP_LAYOUT: &str = "next-swap-layout";
+pub(crate) const ACTION_CLOSE_SELF: &str = "close-self";
+pub(crate) const ACTION_HIDE_SELF: &str = "hide-self";
 
 // ── Message struct ──────────────────────────────────────────────────
 
@@ -27,7 +27,7 @@ use crate::output_port::OutputPort;
 /// Construct via the named factory methods, then call [`to_plugin`](Self::to_plugin)
 /// to turn it into a [`PluginMessage`] or [`act`](Self::act) to dispatch it on
 /// the plugin thread.
-#[doc(hidden)] pub struct Message {
+pub(crate) struct Message {
     name: String,
     payload: String,
 }
@@ -69,7 +69,7 @@ impl Message {
     }
 
     /// Dispatch this message as a direct ABI call (no port indirection).
-    #[doc(hidden)] pub fn act_abi(&self) {
+    pub(crate) fn act_abi(&self) {
         match self.name.as_str() {
             MSG_EXECUTE_ACTION => match self.payload.as_str() {
                 ACTION_NEXT_SWAP_LAYOUT => next_swap_layout(),
