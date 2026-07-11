@@ -1,0 +1,9 @@
+name: "Unit Test"
+description: "Run Rust tests (all test types)"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Run tests
+      run: cargo test
+      shell: bash

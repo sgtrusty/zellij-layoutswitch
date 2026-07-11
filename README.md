@@ -1,6 +1,6 @@
 # Zellij Layout Switcher
 
-![GitHub Repo stars](https://img.shields.io/github/stars/sgtrusty/zellij-layoutswitch?style=flat\&logo=github)
+![GitHub Repo stars](https://img.shields.io/github/stars/sgtrusty/zellij-layoutswitch?style=flat&logo=github)
 ![License](https://img.shields.io/github/license/sgtrusty/zellij-layoutswitch)
 ![Rust](https://img.shields.io/badge/rust-wasm32--wasip1-orange?logo=rust)
 ![Zellij Plugin](https://img.shields.io/badge/zellij-plugin-purple?logo=zellij)
@@ -10,21 +10,21 @@
 
 <br />
 
-A high-performance Rust WASM plugin for Zellij that enables instant, state-aware swapping of **Swap Layouts** and precise **Pane Focusing**. By bypassing shell-scripted text parsing and communicating directly with the Zellij engine, it provides a flicker-free UI experience.
+A high-performance Rust WASM plugin for Zellij that enables instant, state-aware swapping of **Swap Layouts** and precise **Pane Focusing**.
 
-***
+---
 
 ## 🛠 Features
 
-* **Layout Cycling**: Transitions between `swap_tiled_layouts` (e.g., from "compact" to "expanded") by name.
+- **Layout Cycling**: Transitions between `swap_tiled_layouts` (e.g., from "compact" to "expanded") by name.
 
-* **Targeted Focusing**: Jumps to specific panes by their title (e.g., your "Module Editor") across any layout.
+- **Targeted Focusing**: Jumps to specific panes by their title (e.g., your "Module Editor") across any layout.
 
-* **ABI-Native**: Uses the Zellij WASM ABI for near-zero latency.
+- **ABI-Native**: Uses the Zellij WASM ABI for near-zero latency.
 
-* **Automation-Ready**: Listen for `CustomMessage` or `Pipe` triggers from external scripts, Neovim, or Yazi.
+- **Automation-Ready**: Listen for `CustomMessage` or `Pipe` triggers from external scripts, Neovim, or Yazi.
 
-***
+---
 
 ## 🚀 Getting Started
 
@@ -46,15 +46,16 @@ make build    # Just compile
 To use the plugin in your permanent setup, add it to your `layout.kdl`:
 
 ```kdl
+load_plugins {
+    "file:target/wasm32-wasip1/release/zellij-layoutswitch.wasm"
+}
+
 layout {
     children
-    pane size=1 borderless=true {
-        plugin location="file:~/.config/zellij/plugins/layoutswitch.wasm"
-    }
 }
 ```
 
-***
+---
 
 ## 🧪 Development & Testing
 
@@ -68,11 +69,11 @@ If you want to run the plugin instantly without a layout file:
 zellij action start-or-reload-plugin file:target/wasm32-wasip1/release/layoutswitch.wasm
 ```
 
-### Integrated Dev Environment (`dev.kdl`)
+### Dev Environment
 
 Run this via: `zellij --layout dev.kdl`
 
-***
+---
 
 ## ⌨️ Usage (The API)
 
@@ -94,7 +95,7 @@ Finds a terminal pane with a specific name and gives it focus.
 zellij pipe -n focus-pane -- "Terminal 1"
 ```
 
-***
+---
 
 ## 🧹 Maintenance
 

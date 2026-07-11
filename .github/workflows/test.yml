@@ -1,0 +1,30 @@
+name: Test
+
+on:
+  push:
+    branches-ignore: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  unit-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - uses: Swatinem/rust-cache@v2
+      - run: rustup target add wasm32-wasip1
+      - name: Run tests
+        run: cargo test --target x86_64-unknown-linux-gnu
+        shell: bash
+
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - uses: Swatinem/rust-cache@v2
+      - run: rustup target add wasm32-wasip1
+      - uses: ./.github/actions/coverage
+        with:
+          retention-days: "1"
