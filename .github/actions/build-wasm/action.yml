@@ -6,3 +6,4 @@ runs:
   steps:
     - name: Build
       run: cargo build --release --target wasm32-wasip1
+      shell: bash
