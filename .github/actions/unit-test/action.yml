@@ -4,6 +4,10 @@ description: "Run Rust tests (all test types)"
 runs:
   using: "composite"
   steps:
+    - name: Install wasm32-wasip1 target
+      run: rustup target add wasm32-wasip1
+      shell: bash
+
     - name: Run tests
       run: cargo test
       shell: bash
