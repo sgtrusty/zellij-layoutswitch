@@ -42,7 +42,9 @@ COPY --chown=appuser:appgroup src ./src
 
 # Tests live inside the crate under src/tests/ (included via #[cfg(test)] #[path]),
 # so no separate `tests/` directory is copied.
-RUN INSTA_UPDATE=always cargo test
+# Mirror CI strictness (setup-rust-toolchain defaults to -D warnings) so
+# unused imports/variables fail locally, not only in the pipeline.
+RUN INSTA_UPDATE=always RUSTFLAGS="-D warnings" cargo test
 
 # ==========================================
 # STAGE 3: Coverage
