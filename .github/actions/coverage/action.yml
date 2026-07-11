@@ -31,7 +31,7 @@ runs:
       shell: bash
 
     - name: Generate coverage report
-      run: cargo tarpaulin --all-features --engine llvm --out Html --output-dir ./coverage --target x86_64-unknown-linux-gnu
+      run: cargo tarpaulin --all-features --engine llvm --fail-under 95 --out Html --output-dir ./coverage --target x86_64-unknown-linux-gnu
       shell: bash
 
     - name: Upload coverage artifact

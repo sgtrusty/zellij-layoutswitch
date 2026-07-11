@@ -1,6 +1,6 @@
 [package]
 name = "zellij-layoutswitch"
-version = "0.2.1"
+version = "0.2.2"
 edition = "2021"
 description = "A zellij plugin that helps switching between layouts and panes"
 repository = "https://github.com/sgtrusty/zellij-layoutswitch"
