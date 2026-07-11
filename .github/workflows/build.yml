@@ -2,14 +2,31 @@ name: Release
 
 on:
   push:
-    branches: [main]
+    # branches: [main]
+    branches: ["**"]
 
 env:
   PLUGIN_NAME: zellij-layoutswitch
 
 jobs:
-  release:
+  check:
     if: startsWith(github.event.head_commit.message, 'build(v')
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract version from commit message
+        id: version
+        run: |
+          msg="${{ github.event.head_commit.message }}"
+          ver=$(echo "$msg" | sed -n 's/^build(v\([0-9]*\.[0-9]*\.[0-9]*\)[^)]*):.*/\1/p')
+          echo "version=$ver" >> "$GITHUB_OUTPUT"
+
+  release:
+    needs: check
+    if: needs.check.outputs.version != ''
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -27,17 +44,16 @@ jobs:
       - name: Build
         run: cargo build --release --target wasm32-wasip1
 
-      - name: Extract version from commit message
-        id: version
-        run: |
-          msg="${{ github.event.head_commit.message }}"
-          ver=$(echo "$msg" | sed -n 's/^build(v\([0-9]*\.[0-9]*\.[0-9]*\)):.*/\1/p')
-          echo "version=$ver" >> "$GITHUB_OUTPUT"
-
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ steps.version.outputs.version }}
-          name: v${{ steps.version.outputs.version }}
+          tag_name: v${{ needs.check.outputs.version }}
+          name: v${{ needs.check.outputs.version }}
           files: target/wasm32-wasip1/release/${{ env.PLUGIN_NAME }}.wasm
-          generate_release_notes: true
+          generate_release_notes: false
+          body: |
+            ## Release v${{ needs.check.outputs.version }}
+            This release was automatically triggered by commit: ${{ github.sha }}
+
+            ### Changes:
+            - [View commit history for this release](https://github.com/${{ github.repository }}/commits/${{ github.ref_name }})
