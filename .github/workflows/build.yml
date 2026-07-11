@@ -3,13 +3,36 @@ name: Release
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
 
 env:
   PLUGIN_NAME: zellij-layoutswitch
 
 jobs:
+  unit-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-rust
+      - uses: ./.github/actions/unit-test
+
+  integration-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-rust
+      - uses: ./.github/actions/integration-test
+
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-rust
+      - uses: ./.github/actions/coverage
+
   check:
-    if: startsWith(github.event.head_commit.message, 'build(v')
+    if: startsWith(github.event.head_commit.message, 'build(v') && github.event_name == 'push'
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.version.outputs.version }}
@@ -24,24 +47,17 @@ jobs:
           echo "version=$ver" >> "$GITHUB_OUTPUT"
 
   release:
-    needs: check
+    needs: [check, unit-test, integration-test, coverage]
     if: needs.check.outputs.version != ''
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v4
-
-      - name: Install Rust toolchain
-        uses: actions-rust-lang/setup-rust-toolchain@v1
+      - uses: ./.github/actions/setup-rust
         with:
           target: wasm32-wasip1
-
-      - name: Cache Cargo dependencies
-        uses: Swatinem/rust-cache@v2
-
-      - name: Build
-        run: cargo build --release --target wasm32-wasip1
+      - uses: ./.github/actions/build-wasm
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -55,4 +71,4 @@ jobs:
             This release was automatically triggered by commit: ${{ github.sha }}
 
             ### Changes:
-            - [View commit history for this release](https://github.com/${{ github.repository }}/commits/${{ github.ref_name }})
+            - [View commit history for this release](https://github.com/${{ github.repository }}/commits/${{ github.ref_name }}")

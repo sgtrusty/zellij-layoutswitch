@@ -1,0 +1,8 @@
+name: "Unit Test"
+description: "Run Rust unit tests (lib only)"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Run unit tests
+      run: cargo test --lib

@@ -1,0 +1,8 @@
+name: "Build WASM"
+description: "Build Rust project for wasm32-wasip1 target"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Build
+      run: cargo build --release --target wasm32-wasip1
