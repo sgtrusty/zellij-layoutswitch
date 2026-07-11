@@ -17,7 +17,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: rustup target add wasm32-wasip1
       - name: Run tests
-        run: cargo test
+        run: cargo test --target x86_64-unknown-linux-gnu
         shell: bash
 
   coverage:
