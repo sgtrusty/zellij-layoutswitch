@@ -1,6 +1,5 @@
 use crate::message::{ACTION_NEXT_SWAP_LAYOUT, MSG_EXECUTE_ACTION, MSG_FOCUS_PANE, Message};
 use crate::output_port::*;
-use zellij_tile::prelude::*;
 
 #[test]
 fn recording_port_captures_post_to_plugin() {
