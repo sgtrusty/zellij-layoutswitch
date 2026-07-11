@@ -372,3 +372,92 @@ fn snapshot_status_after_reset() {
     let status = "plugin-layoutswitch: IDLE".to_string();
     insta::assert_snapshot!("flow_status_idle", status);
 }
+
+// ── Discovery cycle with positive distance fires multiple switches ──────
+
+#[test]
+fn discovery_cycle_with_distance_fires_multiple_switches() {
+    let port = install();
+    let mut worker = LayoutWorker::default();
+    worker.target_layout = Some("C".into());
+    worker.visited_layouts = vec!["A".into(), "B".into()];
+    worker.layout_cycle = vec!["A".into(), "B".into(), "C".into()];
+
+    worker.handle_tab_update(vec![make_tab("t", true, Some("A"))]);
+
+    assert!(worker.cycle_complete);
+    let msgs = port.take_plugin_messages();
+    let switches: Vec<_> = msgs.iter().filter(|m| m.payload == ACTION_NEXT_SWAP_LAYOUT).collect();
+    assert_eq!(switches.len(), 2);
+    assert!(worker.switches_fired);
+    assert_eq!(worker.retry_count, 0);
+    clear_port();
+}
+
+// ── Discovery exhaustion after MAX retries ──────────────────────────────
+
+#[test]
+fn discovery_exhausted_after_max_retries() {
+    let port = install();
+    let mut worker = LayoutWorker::default();
+    worker.target_layout = Some("C".into());
+    worker.retry_count = MAX_LAYOUT_RETRIES - 1;
+
+    worker.handle_tab_update(vec![make_tab("t", true, Some("A"))]);
+
+    assert!(!worker.processing_layout);
+    assert!(worker.target_layout.is_none());
+    assert!(worker.visited_layouts.is_empty());
+    clear_port();
+}
+
+// ── Cycle complete: already at target resets ────────────────────────────
+
+#[test]
+fn cycle_complete_already_at_target_resets() {
+    let port = install();
+    let mut worker = LayoutWorker::default();
+    worker.cycle_complete = true;
+    worker.layout_cycle = vec!["A".into(), "B".into()];
+    worker.last_tab_infos = Some(vec![make_tab("t", true, Some("A"))]);
+    worker.target_layout = Some("A".into());
+
+    worker.handle_tab_update(vec![make_tab("t", true, Some("A"))]);
+
+    assert!(!worker.processing_layout);
+    assert!(worker.target_layout.is_none());
+    let msgs = port.take_plugin_messages();
+    assert!(msgs.iter().all(|m| m.payload != ACTION_NEXT_SWAP_LAYOUT));
+    clear_port();
+}
+
+// ── Cycle complete: retry exhaustion gives up ───────────────────────────
+
+#[test]
+fn cycle_complete_retry_exhausted_gives_up() {
+    let port = install();
+    let mut worker = LayoutWorker::default();
+    worker.cycle_complete = true;
+    worker.layout_cycle = vec!["A".into(), "B".into(), "C".into()];
+    worker.last_tab_infos = Some(vec![make_tab("t", true, Some("A"))]);
+    worker.target_layout = Some("C".into());
+    worker.retry_count = MAX_LAYOUT_RETRIES;
+
+    worker.handle_tab_update(vec![make_tab("t", true, Some("A"))]);
+
+    assert!(!worker.processing_layout);
+    assert!(worker.target_layout.is_none());
+    clear_port();
+}
+
+// ── Permission denied handling ──────────────────────────────────────────
+
+#[test]
+fn handle_permission_result_denied() {
+    let port = install();
+    let mut worker = LayoutWorker::default();
+    worker.handle_permission_result(PermissionStatus::Denied);
+    let msgs = port.take_plugin_messages();
+    assert!(msgs.is_empty());
+    clear_port();
+}

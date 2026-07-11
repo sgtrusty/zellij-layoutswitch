@@ -40,7 +40,6 @@ coverage:
     mkdir -p coverage && \
     docker create --name {{DOCKER_IMAGE}}-coverage-tmp {{DOCKER_IMAGE}}-coverage && \
     docker cp {{DOCKER_IMAGE}}-coverage-tmp:/app/coverage ./ && \
-    docker cp {{DOCKER_IMAGE}}-coverage-tmp:/app/coverage-output.txt ./coverage-output.txt && \
     docker rm {{DOCKER_IMAGE}}-coverage-tmp
     @echo "Coverage report written to ./coverage/index.html"
 

@@ -332,3 +332,18 @@ fn snapshot_focusing_status_string() {
     };
     insta::assert_snapshot!("focusing_status", status);
 }
+
+// ── permission-result integration ──────────────────────────────────────
+
+#[test]
+fn permission_result_forwards_to_worker() {
+    let port = install();
+    let mut worker = LayoutWorker::default();
+    let msg = Message::permission_result(&PermissionStatus::Denied).unwrap();
+    worker.on_message(msg.name().into(), msg.payload().into());
+
+    assert!(!worker.processing_layout);
+    let msgs = port.take_plugin_messages();
+    assert!(msgs.is_empty());
+    clear_port();
+}
