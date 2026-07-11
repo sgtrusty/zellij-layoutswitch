@@ -40,3 +40,12 @@ mod state_routing;
 #[cfg(test)]
 #[path = "tests/worker_dispatch.rs"]
 mod worker_dispatch;
+#[cfg(test)]
+#[path = "tests/message.rs"]
+mod message_tests;
+#[cfg(test)]
+#[path = "tests/output_port.rs"]
+mod output_port_tests;
+#[cfg(test)]
+#[path = "tests/lib_api.rs"]
+mod lib_api_tests;

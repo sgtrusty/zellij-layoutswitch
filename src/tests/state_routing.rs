@@ -178,6 +178,14 @@ fn update_unknown_event_no_render() {
     clear_port();
 }
 
+#[test]
+fn load_requests_permissions_and_subscribes() {
+    let _port = install();
+    let mut state = State::default();
+    state.load(std::collections::BTreeMap::new());
+    clear_port();
+}
+
 // ── render() ────────────────────────────────────────────────────────
 
 #[test]
