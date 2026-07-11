@@ -27,15 +27,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: ./.github/actions/setup-rust
-      - uses: ./.github/actions/unit-test
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - uses: Swatinem/rust-cache@v2
+      - name: Run tests
+        run: cargo test
+        shell: bash
 
   coverage:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: ./.github/actions/setup-rust
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - uses: Swatinem/rust-cache@v2
       - uses: ./.github/actions/coverage
+        with:
+          retention-days: "7"
 
   release:
     needs: [check, unit-test, coverage]
@@ -45,10 +51,13 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
-      - uses: ./.github/actions/setup-rust
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           target: wasm32-wasip1
-      - uses: ./.github/actions/build-wasm
+      - uses: Swatinem/rust-cache@v2
+      - name: Build
+        run: cargo build --release --target wasm32-wasip1
+        shell: bash
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2

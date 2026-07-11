@@ -1,8 +1,0 @@
-name: "Integration Test"
-description: "Run Rust integration tests"
-
-runs:
-  using: "composite"
-  steps:
-    - name: Run integration tests
-      run: cargo test --tests
